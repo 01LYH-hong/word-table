@@ -11,7 +11,7 @@ class WordTable {
    * @param header
    * @param body
    */
-  constructor(header = [], body = []) {
+  constructor(header = [], body = [], footer = []) {
     // 标记内容是否修改
     this._updated = true;
     // ascii table 字符串缓存
@@ -24,9 +24,13 @@ class WordTable {
     // 缓存字符串宽度，防止后续重复计算
     this._wordWidthMap = [];
     // header 数据
-    this._tableHeader = header;
+    this._tableHeader = header.length ? header : ['header Name'];
     // 全部数据
-    this._tableBody = body;
+    this._tableBody = body.length ? body : [['key','value','value']];
+    
+    this._tableFooter = footer.length ? footer : ['header Name'];
+    this._tableHeaderLength = 0;
+    this._tableFooterLength = 0;
   }
 
   _fillStr = (l, c) => {
@@ -56,8 +60,12 @@ class WordTable {
   };
 
   _initDatas = () => {
+    this._tableHeaderLength = this._tableHeader.length;
+    this._tableFooterLength = this._tableFooter.length;
     this._tableDatas = this._tableBody.concat();
-    if (this._tableHeader.length > 0) this._tableDatas.splice(0, 0, this._tableHeader);
+    //if (this._tableHeader.length > 0) this._tableDatas.splice(0, 0, this._tableHeader);
+    if (this._tableHeader.length > 0) this._tableHeader.map((s,i) => this._tableDatas.splice(index, 0 ,[item]));
+    if (this._tableFooter.length > 0) this._tableFooter.map(s => this._tableDatas.push([s]);
 
     // reset
     this._tableColLength = [];
@@ -80,21 +88,39 @@ class WordTable {
   };
 
   // 绘制分割横线
-  _drawDivider = (sepWidth) => {
+  _drawDivider = (sepWidth, index = null, totolIndex = null) => {
+    let flag = false;
     let i;
     let width;
     let str = '+';
+    
+    if (index&&totolIndex) {
+      flag = true;
+      if (this._tableHeaderLength > index) flag = false
+      else if (index > totolIndex - this._tableFooterLength) flag = false
+    }
+    
     for (i = 0; i < this._maxCols; i += 1) {
       width = this._tableColLength[i] + sepWidth[i] * 2;
       str += this._fillStr(width, '-');
 
-      str += '+';
+      if(flag) str += '+';
+      else if (i == this._maxCols - 1) str += '+'; //最后
+      else str += '-';
     }
     return str;
   };
 
+  _drawHeaderAndFooterLine = (index, totolIndex) => {
+    let flag = true;
+    if (this._tableHeaderLength > index) flag = false
+    else if (index >= totolIndex - this._tableFooterLength) flag = false
+    return flag
+  }
+
   // 绘制每一行数据
-  _drawLine = (rowdata, sepWidth, index) => {
+  _drawLine = (rowdata, sepWidth, index, totolIndex) => {
+    let flag = this._drawHeaderAndFooterLine(index, totolIndex)
     let i;
     let str = '|';
     const collen = rowdata.length;
@@ -105,7 +131,10 @@ class WordTable {
       if (i >= collen) {
         // 元素不足，需要使用空格补充
         str += this._fillStr(this._tableColLength[i] + sepWidth[i] * 2, ' ');
-        str += '|';
+        
+        if(flag) str += '|';
+        else if (i == this._maxCols - 1) str += '|'; //最后
+        else str += ' ';
       } else {
         // 元素存在
         temp = (this._tableColLength[i] - this._wordWidthMap[index][i]) / 2;
@@ -114,7 +143,10 @@ class WordTable {
         str += this._fillStr(sepWidth[i] + left, ' ');
         str += rowdata[i];
         str += this._fillStr(sepWidth[i] + right, ' ');
-        str += '|';
+        
+        if(flag) str += '|';
+        else if (i == this._maxCols - 1) str += '|'; //最后
+        else str += ' ';
       }
     }
     return str;
@@ -130,14 +162,16 @@ class WordTable {
       sepWidth.push(Math.ceil(this._tableColLength[i] / 4));
     }
 
-    const divider = this._drawDivider(sepWidth); // 分割线
-    this._stringTable = [divider];
+    //const divider = this._drawDivider(sepWidth); // 分割线
+    //this._stringTable = [divider];
+    this._stringTable = [];
 
     // 遍历每一行数据，绘制 table
     for (i = 0; i < rowlen; i += 1) {
-      this._stringTable.push(this._drawLine(this._tableDatas[i], sepWidth, i));
-      this._stringTable.push(divider);
+      this._stringTable.push(this._drawLine(sepWidth, i, rowlen));
+      this._stringTable.push(this._drawLine(this._tableDatas[i], sepWidth, i, rowlen));
     }
+    this._stringTable.push(this._drawLine(sepWidth));
   };
 
   /**
